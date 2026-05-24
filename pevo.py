@@ -31,9 +31,11 @@ class MoteurPolyglotte:
             s_i_t = math.exp(-lambda_eff * self.t) + self.beta_dark
             return min(1.0, math.pow(s_i_t, self.Q))
 
-    def exécuter_calcul_go(self, fiab_base, b_factor):
+    def exécuter_calcul_go(self, fiab_base, b_factor, nom_couche):
         try:
-            res = subprocess.run([self.bin_go, str(fiab_base), str(b_factor)], capture_output=True, text=True, check=True)
+            # Envoi de la métrique, de l'exposant Blockchain, et de l'identifiant de couche
+            res = subprocess.run([self.bin_go, str(fiab_base), str(b_factor), nom_couche], 
+                                 capture_output=True, text=True, check=True)
             return float(res.stdout.strip())
         except Exception:
             return math.pow(fiab_base, b_factor)
@@ -46,7 +48,7 @@ class MoteurPolyglotte:
 
         # 2. Couche Deep
         S1_f = math.pow(0.95, self.Q)
-        F1_f = self.exécuter_calcul_go(self.fiabilite_base[1], self.B)
+        F1_f = self.exécuter_calcul_go(self.fiabilite_base[1], self.B, "Deep_Web")
         P1 = self.alpha[1] * (S1_f * F1_f * self.C_t)
 
         # 3. Couche Darknet (Déléguée à Rust avec atténuation quantique de l'attaque)
