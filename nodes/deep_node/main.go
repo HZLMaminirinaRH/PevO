@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+        "net/http"
 )
 
 type BlocConsensus struct {
@@ -88,6 +89,17 @@ func gererClient(conn net.Conn) {
 }
 
 func main() {
+	// Lancement du serveur d'hébergement Web autonome sur le port 8083
+	go func() {
+		fs := http.FileServer(http.Dir("../../www"))
+		http.Handle("/", fs)
+		fmt.Println("[GO] Serveur de stockage Web actif sur le port 8083...")
+		if err := http.ListenAndServe("127.0.0.1:8083", nil); err != nil {
+			fmt.Printf("[GO] Erreur serveur Web : %v\n", err)
+		}
+	}()
+
+	// Le reste de votre fonction main() existante pour l'écoute TCP (Port 8082) reste inchangé
 	adresse := "127.0.0.1:8082"
 	listener, err := net.Listen("tcp", adresse)
 	if err != nil {
@@ -102,6 +114,6 @@ func main() {
 		if err != nil {
 			continue
 		}
-		go gererClient(conn) // Traitement concurrent asynchrone
+		go gererClient(conn)
 	}
 }

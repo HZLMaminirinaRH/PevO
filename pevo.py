@@ -1,3 +1,5 @@
+import http.server
+import urllib.request
 import socket
 import subprocess
 import math
@@ -110,36 +112,37 @@ class MoteurPolyglotte:
 
         return min(1.0, P0 + P1 + P2)
 
+class HandlerHebergement(http.server.SimpleHTTPRequestHandler):
+    def do_GET(self):
+        # Si l'utilisateur demande la racine, on va chercher la page hébergée chez le nœud Go
+        try:
+            with urllib.request.urlopen("http://127.0.0.1:8083/") as reponse:
+                self.send_response(200)
+                self.send_header("Content-type", "text/html")
+                self.end_headers()
+                self.wfile.write(reponse.read())
+        except Exception:
+            self.send_response(500)
+            self.end_headers()
+            self.wfile.write(b"Erreur de liaison avec le noeud de stockage Go.")
+
 if __name__ == "__main__":
-    print("=== PevO : Lancement du Démon de Surveillance Persistant ===")
+    print("=== PevO : Lancement de l'Infrastructure avec Hébergement Web ===")
     moteur = MoteurPolyglotte()
     
-    compteur_cycles = 0
-    max_cycles = 4 # On fixe à 4 cycles pour ce test automatique avant le push Git
+    # Lancement du serveur Web public sur le port 8080 (Accessible sur votre réseau)
+    serveur_port = 80
+    serveur_http = http.server.HTTPServer(("0.0.0.0", serveur_port), HandlerHebergement)
+    print(f"[Python] Serveur d'hébergement public ouvert sur http://localhost:{serveur_port}")
     
     try:
-        while compteur_cycles < max_cycles:
-            compteur_cycles += 1
-            print(f"\n--- Cycle de Télémétrie n°{compteur_cycles} (t = {moteur.t}s) ---")
-            
-            # Simulation d'une perturbation aléatoire une fois sur deux pour tester l'IA
-            crise_active = (compteur_cycles % 2 == 0)
-            
-            moteur.optimiser_ia_cognitive(perturbations=crise_active)
-            p_globale = moteur.calculer_resilience_globale()
-            
-            print(f"-> Résilience calculée via Sockets : {p_globale * 100:.2f}%")
-            print(f"-> Poids des nœuds : Surface={moteur.alpha[0]}, Deep(Go)={moteur.alpha[1]}, Darknet(Rust)={moteur.alpha[2]}")
-            
-            # Évolution du temps de simulation pour dynamiser les formules exponentielles
-            moteur.t += 1.0
-            
-            # Pause de 2 secondes entre deux requêtes sockets
-            time.sleep(2)
-            
-        print("\n[PevO] Fin du cycle de test persistant. Préparation de la synchronisation Git...")
-        sys.exit(0)
+        # On effectue un cycle initial de calcul pour armer l'IA
+        moteur.optimiser_ia_cognitive(perturbations=False)
+        moteur.calculer_resilience_globale()
         
+        # Le script reste en écoute pour distribuer le site web gratuitement
+        serveur_http.serve_forever()
     except KeyboardInterrupt:
-        print("\n[PevO] Arrêt du démon par l'utilisateur.")
+        print("\n[PevO] Fermeture de l'hébergement.")
+        serveur_http.server_close()
         sys.exit(0)
