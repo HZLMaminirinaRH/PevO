@@ -1,3 +1,4 @@
+import socket
 import subprocess
 import math
 import sys
@@ -26,11 +27,24 @@ class MoteurPolyglotte:
 
     def exécuter_calcul_rust(self):
         try:
-            cmd = [self.bin_rust, str(self.t), str(self.lambda_dark), str(self.beta_dark), str(self.Q)]
-            res = subprocess.run(cmd, capture_output=True, text=True, check=True)
-            return float(res.stdout.strip())
-        except Exception:
-            return 0.85
+            # Création d'une socket client TCP
+            client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client.settimeout(2.0) # Évite les blocages infinis
+            client.connect(("127.0.0.1", 8081))
+            
+            # Formatage de la chaîne de paramètres : "t,lambda,beta,Q"
+            requete = f"{self.t},{self.lambda_dark},{self.beta_dark},{self.Q}"
+            client.send(requete.encode('utf-8'))
+            
+            # Récupération de la réponse du serveur Rust
+            reponse = client.recv(1024).decode('utf-8')
+            client.close()
+            return float(reponse.strip())
+        except Exception as e:
+            # En cas d'absence du serveur Rust (pas encore lancé), repli mathématique local
+            lambda_eff = self.lambda_dark / self.Q
+            s_i_t = math.exp(-lambda_eff * self.t) + self.beta_dark
+            return min(1.0, math.pow(s_i_t, self.Q))
 
     def exécuter_calcul_go(self, fiab_base, b_factor, nom_couche):
         try:
