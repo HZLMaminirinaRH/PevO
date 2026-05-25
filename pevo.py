@@ -114,24 +114,28 @@ class MoteurPolyglotte:
 
 class HandlerHebergement(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
-        # Si l'utilisateur demande la racine, on va chercher la page hébergée chez le nœud Go
-        try:
-            with urllib.request.urlopen("http://127.0.0.1:8083/") as reponse:
-                self.send_response(200)
-                self.send_header("Content-type", "text/html")
+        # L'IA intercepte la requête et sert directement le fichier local
+        if self.path == "/" or self.path == "/index.html":
+            try:
+                with open("www/index.html", "rb") as fichier:
+                    self.send_response(200)
+                    self.send_header("Content-type", "text/html; charset=utf-8")
+                    self.end_headers()
+                    self.wfile.write(fichier.read())
+            except Exception as e:
+                self.send_response(500)
                 self.end_headers()
-                self.wfile.write(reponse.read())
-        except Exception:
-            self.send_response(500)
-            self.end_headers()
-            self.wfile.write(b"Erreur de liaison avec le noeud de stockage Go.")
+                self.wfile.write(b"Erreur critique : Fichier index.html introuvable.")
+        else:
+            super().do_GET()
 
 if __name__ == "__main__":
     print("=== PevO : Lancement de l'Infrastructure avec Hébergement Web ===")
     moteur = MoteurPolyglotte()
     
     # Lancement du serveur Web public sur le port 8080 (Accessible sur votre réseau)
-    serveur_port = 80
+    serveur_port = 8080
+
     serveur_http = http.server.HTTPServer(("0.0.0.0", serveur_port), HandlerHebergement)
     print(f"[Python] Serveur d'hébergement public ouvert sur http://localhost:{serveur_port}")
     

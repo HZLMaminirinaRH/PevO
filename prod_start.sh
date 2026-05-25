@@ -22,4 +22,4 @@ sleep 1
 # 3. Lancement de l'hébergeur et du moteur cognitif (Python)
 echo "[Système] PevO est maintenant en ligne et accessible publiquement."
 echo "--> Appuyez sur CTRL+C pour arrêter proprement le serveur."
-python pevo.py
+python3 pevo.py
