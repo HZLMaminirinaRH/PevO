@@ -48,11 +48,22 @@ class MoteurPolyglotte:
 
     def exécuter_calcul_go(self, fiab_base, b_factor, nom_couche):
         try:
-            res = subprocess.run([self.bin_go, str(fiab_base), str(b_factor), nom_couche], 
-                                 capture_output=True, text=True, check=True)
-            return float(res.stdout.strip())
-        except Exception:
-            return 0.90
+            # Connexion au serveur Go distribué
+            client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client.settimeout(2.0)
+            client.connect(("127.0.0.1", 8082))
+            
+            # Transmission des paramètres requis
+            requete = f"{fiab_base},{b_factor},{nom_couche}"
+            client.send(requete.encode('utf-8'))
+            
+            # Réception du consensus immuable de Go
+            reponse = client.recv(1024).decode('utf-8')
+            client.close()
+            return float(reponse.strip())
+        except Exception as e:
+            # Fallback local
+            return math.pow(fiab_base, b_factor)
 
     def optimiser_ia_cognitive(self, perturbations=False):
         """
