@@ -4,14 +4,16 @@ use std::net::{TcpListener, TcpStream};
 fn gerer_client(mut stream: TcpStream) {
     let mut buffer = [0; 512];
     
-    // Lecture des données brutes envoyées par Python
     if let Ok(bytes_lus) = stream.read(&mut buffer) {
         if bytes_lus == 0 { return; }
         
-        let requete_str = String::from_utf8_lossy(&buffer[..bytes_lus]);
+        // --- COUCHE SÉCURITÉ : Déchiffrement XOR avec la clé secrète 0x42 ---
+        let mut donnees_dechiffrees = vec![0; bytes_lus];
+        for i in 0..bytes_lus {
+            donnees_dechiffrees[i] = buffer[i] ^ 0x42;
+        }
         
-        // Parsing manuel ultra-léger (évite d'importer la crate serde pour économiser la RAM de Termux)
-        // Format attendu de Python : "t,lambda,beta,Q"
+        let requete_str = String::from_utf8_lossy(&donnees_dechiffrees);
         let parametres: Vec<&str> = requete_str.trim().split(',').collect();
         
         if parametres.len() >= 4 {
@@ -20,16 +22,18 @@ fn gerer_client(mut stream: TcpStream) {
             let beta: f64 = parametres[2].parse().unwrap_or(0.5);
             let q: f64 = parametres[3].parse().unwrap_or(1.1);
 
-            // Matérialisation du Facteur Quantique (Immunité)
             let lambda_effectif = lambda_base / q;
             let s_i_t = (-lambda_effectif * t).exp() + beta;
             let s_futur = s_i_t.powf(q).min(1.0).max(0.0);
 
-            // Préparation de la réponse textuelle brute
             let reponse = format!("{:.4}", s_futur);
             
-            // Renvoi du résultat à travers le socket
-            let _ = stream.write_all(reponse.as_bytes());
+            // On peut également chiffrer la réponse renvoyée à Python
+            let mut reponse_chiffree = reponse.into_bytes();
+            for b in reponse_chiffree.iter_mut() {
+    *b ^= 0x42;
+}            
+            let _ = stream.write_all(&reponse_chiffree);
             let _ = stream.flush();
         }
     }

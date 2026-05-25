@@ -34,8 +34,13 @@ func gererClient(conn net.Conn) {
 		return
 	}
 
-	requeteStr := string(buffer[:bytesLus])
-	// Format attendu de Python : "fiabilite_base,b_factor,nom_couche"
+	// --- COUCHE SÉCURITÉ : Déchiffrement XOR avec la clé secrète 0x42 ---
+	donneesDechiffrees := make([]byte, bytesLus)
+	for i := 0; i < bytesLus; i++ {
+		donneesDechiffrees[i] = buffer[i] ^ 0x42
+	}
+
+	requeteStr := string(donneesDechiffrees)
 	parametres := strings.Split(strings.TrimSpace(requeteStr), ",")
 
 	if len(parametres) >= 3 {
@@ -64,15 +69,21 @@ func gererClient(conn net.Conn) {
 			fiabiliteFutur = 0.0
 		}
 
-		// Borner le résultat
 		if fiabiliteFutur > 1.0 {
 			fiabiliteFutur = 1.0
 		} else if fiabiliteFutur < 0.0 {
 			fiabiliteFutur = 0.0
 		}
 
-		reponse := fmt.Sprintf("%.4f\n", fiabiliteFutur)
-		conn.Write([]byte(reponse))
+		reponseRaw := fmt.Sprintf("%.4f\n", fiabiliteFutur)
+		reponseBytes := []byte(reponseRaw)
+
+		// --- COUCHE SÉCURITÉ : Chiffrement XOR de la réponse ---
+		for i := 0; i < len(reponseBytes); i++ {
+			reponseBytes[i] ^= 0x42
+		}
+
+		conn.Write(reponseBytes)
 	}
 }
 

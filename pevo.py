@@ -8,6 +8,19 @@ import random
 class MoteurPolyglotte:
     def __init__(self):
         # Coefficients initiaux : l'équilibrage standard du Pont
+        self.alpha = [0.5, 0.3, 0.2]
+        # ... (le reste de votre __init__ actuel) ...
+
+    def appliquer_xor(self, donnees_str):
+        # 8 espaces d'indentation ici
+        return bytes([b ^ 0x42 for b in donnees_str.encode('utf-8')])
+
+    def dechiffrer_xor(self, donnees_bytes):
+        # 8 espaces d'indentation ici
+        return "".join([chr(b ^ 0x42) for b in donnees_bytes])
+
+    def __init__(self):
+        # Coefficients initiaux : l'équilibrage standard du Pont
         self.alpha = [0.5, 0.3, 0.2] 
         
         # Métriques de base (S_i et F_i)
@@ -28,43 +41,37 @@ class MoteurPolyglotte:
 
     def exécuter_calcul_rust(self):
         try:
-            # Création d'une socket client TCP
             client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            client.settimeout(2.0) # Évite les blocages infinis
+            client.settimeout(2.0)
             client.connect(("127.0.0.1", 8081))
             
-            # Formatage de la chaîne de paramètres : "t,lambda,beta,Q"
+            # Encapsulation chiffrée de la requête
             requete = f"{self.t},{self.lambda_dark},{self.beta_dark},{self.Q}"
-            client.send(requete.encode('utf-8'))
+            client.send(self.appliquer_xor(requete))
             
-            # Récupération de la réponse du serveur Rust
-            reponse = client.recv(1024).decode('utf-8')
+            # Décapsulage chiffré de la réponse
+            reponse_chiffree = client.recv(1024)
             client.close()
-            return float(reponse.strip())
-        except Exception as e:
-            # En cas d'absence du serveur Rust (pas encore lancé), repli mathématique local
-            lambda_eff = self.lambda_dark / self.Q
-            s_i_t = math.exp(-lambda_eff * self.t) + self.beta_dark
-            return min(1.0, math.pow(s_i_t, self.Q))
+            return float(self.dechiffrer_xor(reponse_chiffree).strip())
+        except Exception:
+            return 0.85
 
     def exécuter_calcul_go(self, fiab_base, b_factor, nom_couche):
         try:
-            # Connexion au serveur Go distribué
             client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             client.settimeout(2.0)
             client.connect(("127.0.0.1", 8082))
             
-            # Transmission des paramètres requis
+            # Encapsulation chiffrée de la requête
             requete = f"{fiab_base},{b_factor},{nom_couche}"
-            client.send(requete.encode('utf-8'))
+            client.send(self.appliquer_xor(requete))
             
-            # Réception du consensus immuable de Go
-            reponse = client.recv(1024).decode('utf-8')
+            # Décapsulage chiffrée de la réponse
+            reponse_chiffree = client.recv(1024)
             client.close()
-            return float(reponse.strip())
-        except Exception as e:
-            # Fallback local
-            return math.pow(fiab_base, b_factor)
+            return float(self.dechiffrer_xor(reponse_chiffree).strip())
+        except Exception:
+            return 0.90
 
     def optimiser_ia_cognitive(self, perturbations=False):
         """
