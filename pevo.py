@@ -2,6 +2,7 @@ import socket
 import subprocess
 import math
 import sys
+import time
 import random
 
 class MoteurPolyglotte:
@@ -103,19 +104,35 @@ class MoteurPolyglotte:
         return min(1.0, P0 + P1 + P2)
 
 if __name__ == "__main__":
-    print("=== PevO : Simulation du Moteur Cognitif Adaptatif ===")
+    print("=== PevO : Lancement du Démon de Surveillance Persistant ===")
     moteur = MoteurPolyglotte()
     
-    # Étape A : Simulation en mode Nominal
-    moteur.optimiser_ia_cognitive(perturbations=False)
-    p_nominal = moteur.calculer_resilience_globale()
-    print(f"-> Résilience en mode Nominal : {p_nominal * 100:.2f}%")
-    print(f"-> Distribution des charges (alpha) : {moteur.alpha}\n")
+    compteur_cycles = 0
+    max_cycles = 4 # On fixe à 4 cycles pour ce test automatique avant le push Git
     
-    # Étape B : Simulation en mode Crise / Attaque
-    moteur.optimiser_ia_cognitive(perturbations=True)
-    p_crise = moteur.calculer_resilience_globale()
-    print(f"-> Résilience sous Optimisation IA : {p_crise * 100:.2f}%")
-    print(f"-> Nouvelle distribution adaptative (alpha) : {moteur.alpha}")
-    
-    sys.exit(0)
+    try:
+        while compteur_cycles < max_cycles:
+            compteur_cycles += 1
+            print(f"\n--- Cycle de Télémétrie n°{compteur_cycles} (t = {moteur.t}s) ---")
+            
+            # Simulation d'une perturbation aléatoire une fois sur deux pour tester l'IA
+            crise_active = (compteur_cycles % 2 == 0)
+            
+            moteur.optimiser_ia_cognitive(perturbations=crise_active)
+            p_globale = moteur.calculer_resilience_globale()
+            
+            print(f"-> Résilience calculée via Sockets : {p_globale * 100:.2f}%")
+            print(f"-> Poids des nœuds : Surface={moteur.alpha[0]}, Deep(Go)={moteur.alpha[1]}, Darknet(Rust)={moteur.alpha[2]}")
+            
+            # Évolution du temps de simulation pour dynamiser les formules exponentielles
+            moteur.t += 1.0
+            
+            # Pause de 2 secondes entre deux requêtes sockets
+            time.sleep(2)
+            
+        print("\n[PevO] Fin du cycle de test persistant. Préparation de la synchronisation Git...")
+        sys.exit(0)
+        
+    except KeyboardInterrupt:
+        print("\n[PevO] Arrêt du démon par l'utilisateur.")
+        sys.exit(0)
