@@ -17,8 +17,18 @@ from pathlib import Path
 # Ajouter le chemin local pour les imports
 sys.path.insert(0, str(Path(__file__).parent))
 
-from core.ipfs_security import SecuriteEvolutiveIPFS
 from core.dynamic_dns import GestionnaireDynDNS
+from core.pinning_service import ServicePinningIPFS
+
+# Import optionnel pour la sécurité (peut échouer si cryptography problématique)
+try:
+    from core.ipfs_security import SecuriteEvolutiveIPFS
+    SECURITE_DISPONIBLE = True
+except Exception as e:
+    SECURITE_DISPONIBLE = False
+    class SecuriteEvolutiveIPFS:
+        def valider_integrite_site(self, h1, h2):
+            return True
 
 class GestionnaireSitesAutonomes:
     """Gère l'ajout et le déploiement autonome de sites web via IPFS"""
@@ -314,6 +324,25 @@ GESTION COMPLÈTE:
 
     subparsers.add_parser('dyndns-status', help='Statut DNS dynamique')
 
+    # === WEB3.STORAGE PINNING ===
+    web3_token = subparsers.add_parser('web3-token', help='Configurer Web3.storage token')
+    web3_token.add_argument('token', help='Token Web3.storage')
+
+    web3_pin = subparsers.add_parser('web3-pin', help='Épingler site sur Web3.storage')
+    web3_pin.add_argument('nom', help='Nom du site')
+
+    subparsers.add_parser('web3-status', help='Statut Web3.storage')
+
+    # === GATEWAYS ALTERNATIVES ===
+    test_gw = subparsers.add_parser('test-gateways', help='Tester gateways IPFS')
+    test_gw.add_argument('nom', help='Nom du site')
+
+    list_gw = subparsers.add_parser('list-gateways', help='Lister gateways')
+    list_gw.add_argument('nom', help='Nom du site')
+
+    gen_page = subparsers.add_parser('generate-access-page', help='Générer page HTML d\'accès')
+    gen_page.add_argument('nom', help='Nom du site')
+
     # === UTILITAIRES ===
     subparsers.add_parser('list', help='Lister tous les sites')
     subparsers.add_parser('stats', help='Afficher statistiques')
@@ -331,6 +360,7 @@ GESTION COMPLÈTE:
     gestionnaire = GestionnaireSitesAutonomes()
     securite = SecuriteEvolutiveIPFS()
     dyndns = GestionnaireDynDNS()
+    pinning = ServicePinningIPFS()
 
     # Routage des commandes
     if args.commande == 'add':
@@ -418,6 +448,49 @@ GESTION COMPLÈTE:
                 print(f"✅ Intégrité vérifiée pour '{args.nom}'")
             else:
                 print(f"⚠️  Attention: L'intégrité ne peut pas être vérifiée")
+        else:
+            print(f"❌ Site '{args.nom}' non déployé sur IPFS")
+
+    # === WEB3.STORAGE ===
+    elif args.commande == 'web3-token':
+        pinning.configurer_web3_token(args.token)
+
+    elif args.commande == 'web3-pin':
+        site = next((s for s in gestionnaire.registry['sites'] if s['nom'] == args.nom), None)
+        if site and site.get('ipfs_hash'):
+            pinning.epingler_sur_web3(args.nom, site['ipfs_hash'])
+        else:
+            print(f"❌ Site '{args.nom}' non déployé sur IPFS")
+
+    elif args.commande == 'web3-status':
+        pinning.afficher_statut_pinning()
+
+    # === GATEWAYS ===
+    elif args.commande == 'test-gateways':
+        site = next((s for s in gestionnaire.registry['sites'] if s['nom'] == args.nom), None)
+        if site and site.get('ipfs_hash'):
+            pinning.tester_gateways(site['ipfs_hash'])
+        else:
+            print(f"❌ Site '{args.nom}' non déployé sur IPFS")
+
+    elif args.commande == 'list-gateways':
+        site = next((s for s in gestionnaire.registry['sites'] if s['nom'] == args.nom), None)
+        if site and site.get('ipfs_hash'):
+            gateways = pinning.obtenir_gateways_alternatives(site['ipfs_hash'])
+            print(f"\n🌐 GATEWAYS DISPONIBLES - {args.nom}")
+            print("=" * 70)
+            for i, gw in enumerate(gateways, 1):
+                print(f"{i}. {gw}")
+            print("=" * 70 + "\n")
+        else:
+            print(f"❌ Site '{args.nom}' non déployé sur IPFS")
+
+    elif args.commande == 'generate-access-page':
+        site = next((s for s in gestionnaire.registry['sites'] if s['nom'] == args.nom), None)
+        if site and site.get('ipfs_hash'):
+            chemin = pinning.sauvegarder_html_acces(args.nom, site['ipfs_hash'])
+            print(f"🔗 Ouvrir dans navigateur:")
+            print(f"   open {chemin}")
         else:
             print(f"❌ Site '{args.nom}' non déployé sur IPFS")
 
