@@ -1,0 +1,16 @@
+# Dépendances Python pour PevO - Architecture Décentralisée
+
+# Sécurité cryptographique
+cryptography>=41.0.0
+
+# Client HTTP pour DuckDNS et IPFS
+requests>=2.31.0
+
+# IPFS Python client (optionnel mais recommandé)
+ipfshttpclient>=0.8.0
+
+# Pour les futures intégrations blockchain
+web3>=6.11.0  # Ethereum/Web3.py (optionnel)
+
+# Utilitaires
+python-dotenv>=1.0.0
