@@ -17,3 +17,12 @@ Cargo.lock
 *.o
 *.a
 *.so
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+
