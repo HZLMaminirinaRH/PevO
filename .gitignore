@@ -2,3 +2,18 @@ hosted_sites/
 *.exe
 dht_node
 pevo_client
+
+# Build artifacts
+target/
+nodes/darknet_node/target/
+nodes/deep_node/deep_node
+nodes/deep_node/*.o
+
+# Rust
+*.rustc_info.json
+Cargo.lock
+
+# Go
+*.o
+*.a
+*.so
