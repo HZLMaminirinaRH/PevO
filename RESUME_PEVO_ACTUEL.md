@@ -43,7 +43,7 @@
 | **Orchestration Python** | ✅ Actif | pevo-cli.py - CLI pour sites |
 | **Site Exemple (HZL)** | ✅ En ligne | https://pevo.netlify.app/ |
 | **Domaine Gratuit** | ✅ Actif | hzlmaminirinarh.duckdns.org |
-| **Email Professionnel** | ✅ Configuré | contact@hzlmaminirinarh.github.io |
+| **Email Professionnel** | ⏳ Optionnel | Zoho Mail (non encore configuré) |
 | **IPFS Integration** | ⏳ Prêt | Gateways IPFS disponibles (10 URLs) |
 | **Web3.Storage Pinning** | ⏳ Prêt | core/pinning_service.py (token Storacha requis) |
 | **Blockchain Audit** | ✅ Codé | core/ipfs_security.py (Proof of Work) |
