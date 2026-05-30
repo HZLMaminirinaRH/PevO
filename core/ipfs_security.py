@@ -17,6 +17,12 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 
+try:
+    # Matrice défensive partagée avec l'orchestrateur cognitif
+    from core.security_matrix import MatriceSecuriteEvolutive, COUCHE_DARKNET
+except ImportError:
+    from security_matrix import MatriceSecuriteEvolutive, COUCHE_DARKNET
+
 
 class SecuriteEvolutiveIPFS:
     """Gère la sécurité adaptative pour l'infrastructure IPFS décentralisée"""
@@ -27,6 +33,9 @@ class SecuriteEvolutiveIPFS:
         self.certs_dir = self.config_dir / "certs"
         self.certs_dir.mkdir(exist_ok=True)
         self.blockchain_file = self.config_dir / "blockchain_trust.json"
+
+        # Matrice de sécurité évolutive : scan du contenu avant hébergement
+        self.matrice = MatriceSecuriteEvolutive()
 
         self._initialiser_blockchain()
 
@@ -223,13 +232,65 @@ class SecuriteEvolutiveIPFS:
 
         return False
 
+    def analyser_site_avant_hebergement(self, chemin_site):
+        """
+        Scanne un site candidat AVANT son hébergement sur PevO.
+
+        Vocation : PevO héberge des sites tiers. Avant de déployer/épingler,
+        on inspecte chaque fichier textuel (HTML/JS/CSS) à la recherche de
+        code malveillant (XSS stocké, injection, traversée). Le verdict est
+        inscrit dans la blockchain de confiance — preuve immuable que le
+        contenu a été audité.
+
+        Returns:
+            dict: {sur: bool, fichiers_suspects: [...], bloc: {...}|None}
+        """
+        extensions_texte = {'.html', '.htm', '.js', '.css', '.json', '.svg', '.xml'}
+        fichiers_suspects = []
+        nb_fichiers = 0
+
+        for fichier in Path(chemin_site).rglob('*'):
+            if not fichier.is_file() or fichier.suffix.lower() not in extensions_texte:
+                continue
+            nb_fichiers += 1
+            try:
+                contenu = fichier.read_text(encoding='utf-8', errors='ignore')
+            except Exception:
+                continue
+
+            verdict = self.matrice.analyser_charge_utile(contenu, COUCHE_DARKNET)
+            if not verdict['sure']:
+                fichiers_suspects.append({
+                    'fichier': str(fichier.relative_to(chemin_site)),
+                    'menaces': verdict['menaces'],
+                })
+
+        sur = len(fichiers_suspects) == 0
+
+        # Inscription du verdict d'audit dans la blockchain de confiance
+        bloc = self.ajouter_bloc_blockchain({
+            'type': 'audit_hebergement',
+            'chemin': str(chemin_site),
+            'fichiers_analyses': nb_fichiers,
+            'verdict': 'sur' if sur else 'suspect',
+            'fichiers_suspects': fichiers_suspects,
+        })
+
+        return {
+            'sur': sur,
+            'fichiers_analyses': nb_fichiers,
+            'fichiers_suspects': fichiers_suspects,
+            'bloc': bloc,
+        }
+
     def generer_rapport_securite(self):
-        """Génère un rapport de sécurité"""
+        """Génère un rapport de sécurité consolidé (chiffrement + défenses)"""
         return {
             'timestamp': datetime.now().isoformat(),
             'blockchain_height': len(self.blockchain['chaîne']),
             'blocs_valides': len(self.blockchain['chaîne']),
             'certificats_actifs': len(list(self.certs_dir.glob('*.pem'))),
             'algorithme_chiffrement': 'AES-128 (Fernet)',
-            'difficulte_proof_of_work': self.blockchain['difficulte']
+            'difficulte_proof_of_work': self.blockchain['difficulte'],
+            'matrice_defensive': self.matrice.rapport(),
         }
